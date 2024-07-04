@@ -9,8 +9,6 @@ Chi tiết xem tại trang chủ: **[here](https://docs.jumpserver.org/zh/v2/)**
 ## Mô hình
 ![Architect](Picture/Workflow.png)
 
-![Mo hinh](Picture/Mo%20hinh.png)
-
 ### 1. Setup Jump Server và tạo SSH Key
 - **Step 1**: Download Jump Server từ file nén
 ```console
@@ -59,6 +57,8 @@ cd jumpserver-installer-v2.28.8
     ```
 
 ### 2. Setup truy cập căn bản
+![Mo hinh](Picture/Mo%20hinh.png)
+
 - **Step 1**: Bật xác thực MFA
 
     ![MFA](Picture/Authentication%20MFA.jpg)

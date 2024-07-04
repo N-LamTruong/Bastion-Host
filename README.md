@@ -7,6 +7,8 @@
 
 Chi tiết xem tại trang chủ: **[here](https://docs.jumpserver.org/zh/v2/)**
 ## Mô hình
+![Architect](Picture/Workflow.png)
+
 ![Mo hinh](Picture/Mo%20hinh.png)
 
 ### 1. Setup Jump Server và tạo SSH Key

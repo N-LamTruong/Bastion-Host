@@ -4,8 +4,14 @@
 2. Setup xác thực MFA, user instance, assets instance, assets permissions, web terminal
 3. Tạo user Jump Server, phân quyền truy cập (roles, user login instance,...)
 4. Quản lý nâng cao (Command Filters, Sessions audit, Batch Command)
+5. Triển khai NGINX Reverse Proxy 2 lớp
+6. Bảo mật nâng cao: kết nối SSL cho container Database, Redis
 
 Chi tiết xem tại trang chủ: **[here](https://docs.jumpserver.org/zh/v2/)**
+## Yêu cầu môi trường
+- Linux (Trong bài hướng dẫn này sử dụng Ubuntu 24.04 LTS)
+- wget curl tar gettext iptables python
+- Phần cứng tối thiểu: 2Core/8GB RAM/60G HDD
 ## Mô hình
 ![Architect](Picture/Workflow.png)
 
@@ -34,17 +40,19 @@ cd jumpserver-installer-v2.28.8
     ```console
     config.txt  core  koko  mariadb  mysql  nginx  redis
     ```
-    Các lệnh vận hành
+    Các lệnh vận hành được thao tác tại **/opt/jumpserver-installer-v2.28.8** (chi tiết các lệnh vận hành sử dụng **./jmsctl.sh --help**)
     ```console
-    cd /opt/jumpserver-installer-v2.28.8
     ./jmsctl.sh start
+    ./jmsctl.sh stop
     ./jmsctl.sh down
     ./jmsctl.sh restart
     ./jmsctl.sh backup
     ./jmsctl.sh upgrade
     ./jmsctl.sh uninstall
-    ./jmsctl.sh -h
+    ...
     ```
+    
+
 - **Step 3**: Setup SSH Key
     
     Tạo SSH Key:
@@ -158,6 +166,112 @@ Test reboot
 
     ![Batch Command](Picture/Batch%20Command.png)
 
-## Bài viết đến đây là hết! 
+### 5. Triển khai NGINX Reverse Proxy 2 lớp
+Ban đầu **SSL mặc định không sử dụng**. Trong bài toán này mình sẽ thiết lập SSL sử dụng Certbot Let's Encrypt. Bản chất khi triển khai JumpServer đã chạy qua container nginx, nhưng chúng ta sẽ cài đặt thêm lớp nginx thứ 2 trực tiếp trên server để làm **Multi-layer nginx reverse proxy**
 
+**Chú ý**: Do container nginx web đang sử dụng port 80. Chúng ta sẽ thay đổi cấu hình container sang port khác để nginx server bên ngoài về sau sẽ dùng được port 80 ([Vì Certbot mặc định lấy port 80/443 để cấp SSL](https://serverfault.com/questions/1084029/how-do-i-specify-a-port-other-than-80-when-adding-ssl-certificate-using-certbot)). Stop JumpServer và thay đổi config tại **/opt/jumpserver/config/config.txt** tìm dòng chứa **HTTP_PORT** sửa thành 81 sau đó Start lại JumpServer
+
+**Yêu cầu**: Đã có domain và trỏ đến IP của JumpServer
+- **Step 1**: Cài đặt nginx bản stable nhất từ [trang chủ nginx](https://nginx.org/en/linux_packages.html#Ubuntu)
+    ```console
+    sudo apt install curl gnupg2 ca-certificates lsb-release ubuntu-keyring
+    ```
+    ```console
+    curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor \
+        | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+    ```
+    ```console
+    gpg --dry-run --quiet --no-keyring --import --import-options import-show /usr/share/keyrings/nginx-archive-keyring.gpg
+    ```
+    ```console
+    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+    http://nginx.org/packages/ubuntu `lsb_release -cs` nginx" \
+        | sudo tee /etc/apt/sources.list.d/nginx.list
+    ```
+    ```console
+    echo -e "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" \
+        | sudo tee /etc/apt/preferences.d/99nginx
+    ```
+    ```console
+    sudo apt update
+    sudo apt install nginx
+    ```
+- **Step 2**: Tạo file config nginx cho JumpServer và cài đặt Certbot for Let's encrypt SSL
+    ```console
+    nano /etc/nginx/conf.d/jumpserver.conf
+    ```
+    Sử dụng IP Private
+    
+    ```console
+    server {
+
+        listen 80;
+        server_name bastion.lamtruong2001.id.vn;
+
+        client_max_body_size 4096m;
+
+        location / {
+                proxy_pass http://172.31.28.12:81;
+                proxy_http_version 1.1;
+                proxy_buffering off;
+                proxy_request_buffering off;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $remote_addr;
+        }
+    }
+    ```
+    ```console
+    nginx -t
+    sudo systemctl restart nginx
+    ```
+    Cài đặt và sử dụng Certbot
+
+    ```console
+    sudo snap install core; sudo snap refresh core
+    sudo snap install --classic certbot
+    sudo ln -s /snap/bin/certbot /usr/bin/certbot
+    sudo certbot --nginx -d example.com -d www.example.com
+    ```
+    **Chú ý**: Điền đúng domain sử dụng JumpServer của bạn. Sau khi chạy sẽ nhập 1 số thông tin cần thiết và xác nhận Certbot sẽ cấp SSL và tự động cấu hình nginx cho bạn. Đến bước này bạn có thể thử truy cập JumpServer thông qua domain
+
+- **Step 3**: Cấu hình container nginx JumpServer sử dụng cùng một SSL (Multi-layer nginx reverse proxy)
+
+    SSL khi sử dụng Certbot ở bước 2 sẽ lưu ở **/etc/letsencrypt/live/your_domain**
+    
+    Copy 2 file **fullchain.pem** và **privkey.pem** vào **/opt/jumpserver/config/nginx/cert**
+    ```console
+    cp fullchain.pem /opt/jumpserver/config/nginx/cert/
+    cp privkey.pem /opt/jumpserver/config/nginx/cert/
+    ```
+    Sau đó cần stop JumpServer để sửa cấu hình SSL
+    ```console
+    cd /opt/jumpserver-installer-v2.28.8/ && ./jmsctl.sh stop
+    nano /opt/jumpserver/config/config.txt
+    ```
+    Nhắc lại lần nữa thì do nginx bên ngoài đã sử dụng port 80/443 để dùng cho [Certbot Let's Encrypt](https://serverfault.com/questions/1084029/how-do-i-specify-a-port-other-than-80-when-adding-ssl-certificate-using-certbot) nên trong container sẽ đổi port HTTPS
+    ```console
+    HTTPS_PORT=8443
+    SERVER_NAME=bastion.lamtruong2001.id.vn
+    SSL_CERTIFICATE=/opt/jumpserver/config/nginx/cert/fullchain.pem
+    SSL_CERTIFICATE_KEY=/opt/jumpserver/config/nginx/cert/privkey.pem
+    ```
+- **Step 4**: Cập nhật lại cấu hình nginx bên ngoài để chuyển tiếp yêu cầu đến container nginx JumpServer thông qua HTTPS
+    ```console
+    nano /etc/nginx/conf.d/jumpserver.conf
+    ```
+    ```
+    proxy_pass https://172.31.28.12:8443;
+    ```
+    ```console
+    nginx -s reload
+    ```
+    Như vậy là đã xong phần thiết lập NGINX Reverse Proxy 2 lớp cho JumpServer. Cùng mở web browser và trải nghiệm ngay thôi nào!!
+
+### 6. Bảo mật nâng cao: kết nối SSL cho container Database, Redis (đang cập nhật, theo dõi thêm tại branch v2.28.8)
 ### Ngoài ra còn rất nhiều các tính năng hữu ích khác, các bạn có thể tự tìm hiểu và thực hành. Chúc các bạn thành công :3
+
+### Nếu bạn gặp lỗi không thể tự xử lý vui lòng tạo "Issues" trên github hoặc cần gấp có thể liên hệ qua Zalo mình 0326 681 592
+
+### Các bạn có thể tích vào ngôi sao ở repo để giúp mình có thêm động lực cống hiến và phát triển hơn ạ ❤️ Cảm ơn mọi người ❤️

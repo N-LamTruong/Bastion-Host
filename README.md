@@ -53,8 +53,10 @@ cd jumpserver-installer-v2.28.8
     ```
     
 
-- **Step 3**: Setup SSH Key
+- **Step 3**: Setup SSH Key (nếu đã có ssh key ở máy cá nhân thì bỏ qua bước này)
     
+    Có nhiều cách, nhiều phần mềm để tạo SSH Key, trong bài toán này mình sẽ sử dụng trực tiếp trên server (lưu ý làm cách nào để sau bạn có thể lấy cả file private key và public key ra ngoài máy cá nhân được)
+
     Tạo SSH Key:
     ```console
     sudo ssh-keygen -t rsa
@@ -63,7 +65,7 @@ cd jumpserver-installer-v2.28.8
     ```console
     ssh-copy-id user@IP
     ```
-
+    Lưu file private key về máy tính cá nhân
 ### 2. Setup truy cập căn bản
 ![Mo hinh](Picture/Mo%20hinh.png)
 
@@ -82,6 +84,8 @@ cd jumpserver-installer-v2.28.8
     Basic: Tên, user login instance
     
     Authorization: Dùng password hoặc dùng SSH Key (trong hướng dẫn này sẽ sử dụng)
+    
+    **Chú ý**: Lấy file private key đã lưu ở phần 1. JumpServer chỉ nhận đúng định dạng PEM của private key (BEGIN RSA PRIVATE KEY ... END RSA PRIVATE KEY). Nếu bạn tạo SSH Key trực tiếp trên server thì định dạng mặc định là PEM. Nhưng nếu bạn dùng các phần mềm khác để tạo thì cần chú ý định dạng ví dụ PuTTYgen thì private key có định dạng PPK cần phải convert về PEM thì mới import vào JumpServer thành công.
 - **Step 3**: Create node, instance assets
 
     Tạo các node theo mục đích sử dụng (phòng ban, roles,...)
@@ -169,7 +173,7 @@ Test reboot
 ### 5. Triển khai NGINX Reverse Proxy 2 lớp
 Ban đầu **SSL mặc định không sử dụng**. Trong bài toán này mình sẽ thiết lập SSL sử dụng Certbot Let's Encrypt. Bản chất khi triển khai JumpServer đã chạy qua container nginx, nhưng chúng ta sẽ cài đặt thêm lớp nginx thứ 2 trực tiếp trên server để làm **Multi-layer nginx reverse proxy**
 
-**Chú ý**: Do container nginx web đang sử dụng port 80. Chúng ta sẽ thay đổi cấu hình container sang port khác để nginx server bên ngoài về sau sẽ dùng được port 80 ([Vì Certbot mặc định lấy port 80/443 để cấp SSL](https://serverfault.com/questions/1084029/how-do-i-specify-a-port-other-than-80-when-adding-ssl-certificate-using-certbot)). Stop JumpServer và thay đổi config tại **/opt/jumpserver/config/config.txt** tìm dòng chứa **HTTP_PORT** sửa thành 81 sau đó Start lại JumpServer
+**Chú ý**: Do container nginx web đang sử dụng port 80. Chúng ta sẽ thay đổi cấu hình container sang port khác để nginx server bên ngoài về sau sẽ dùng được port 80 ([Vì Certbot mặc định lấy port 80/443 để cấp SSL](https://serverfault.com/questions/1084029/how-do-i-specify-a-port-other-than-80-when-adding-ssl-certificate-using-certbot)). Stop JumpServer và thay đổi config tại **/opt/jumpserver/config/config.txt** tìm dòng chứa **HTTP_PORT** sửa thành 81 sau đó Start lại JumpServer (các thao tác vận hành xem lại phần 1)
 
 **Yêu cầu**: Đã có domain và trỏ đến IP của JumpServer
 - **Step 1**: Cài đặt nginx bản stable nhất từ [trang chủ nginx](https://nginx.org/en/linux_packages.html#Ubuntu)
@@ -202,7 +206,7 @@ Ban đầu **SSL mặc định không sử dụng**. Trong bài toán này mình
     ```
     Sử dụng IP Private
     
-    ```console
+    ```
     server {
 
         listen 80;
@@ -251,7 +255,7 @@ Ban đầu **SSL mặc định không sử dụng**. Trong bài toán này mình
     nano /opt/jumpserver/config/config.txt
     ```
     Nhắc lại lần nữa thì do nginx bên ngoài đã sử dụng port 80/443 để dùng cho [Certbot Let's Encrypt](https://serverfault.com/questions/1084029/how-do-i-specify-a-port-other-than-80-when-adding-ssl-certificate-using-certbot) nên trong container sẽ đổi port HTTPS
-    ```console
+    ```
     HTTPS_PORT=8443
     SERVER_NAME=bastion.lamtruong2001.id.vn
     SSL_CERTIFICATE=/opt/jumpserver/config/nginx/cert/fullchain.pem

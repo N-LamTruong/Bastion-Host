@@ -83,9 +83,11 @@ cd jumpserver-installer-v2.28.8
 
     Basic: Tên, user login instance
     
-    Authorization: Dùng password hoặc dùng SSH Key (trong hướng dẫn này sẽ sử dụng)
+    Authorization: Dùng password hoặc dùng SSH Key (trong hướng dẫn này sẽ sử dụng SSH Key để bảo mật hơn)
     
-    **Chú ý**: Lấy file private key đã lưu ở phần 1. JumpServer chỉ nhận đúng định dạng PEM của private key (BEGIN RSA PRIVATE KEY ... END RSA PRIVATE KEY). Nếu bạn tạo SSH Key trực tiếp trên server thì định dạng mặc định là PEM. Nhưng nếu bạn dùng các phần mềm khác để tạo thì cần chú ý định dạng ví dụ PuTTYgen thì private key có định dạng PPK cần phải convert về PEM thì mới import vào JumpServer thành công.
+    **Chú ý**: Lấy file private key đã lưu ở phần 1
+
+    JumpServer chỉ nhận đúng định dạng PEM của private key (BEGIN RSA PRIVATE KEY ... END RSA PRIVATE KEY). Nếu bạn tạo SSH Key trực tiếp trên server thì định dạng mặc định là PEM. Nhưng nếu bạn dùng các phần mềm khác để tạo thì cần chú ý định dạng ví dụ PuTTYgen thì private key có định dạng PPK cần phải convert về PEM thì mới import vào JumpServer thành công.
 - **Step 3**: Create node, instance assets
 
     Tạo các node theo mục đích sử dụng (phòng ban, roles,...)
@@ -156,8 +158,10 @@ Test reboot
 - Quản lý và giám sát truy cập, giúp quản trị viên ghi lại hoạt động của người dùng khi họ truy cập và thực hiện các hoạt động trên hệ thống. Sessions audit có thể được sử dụng để giám sát và phát hiện các hành vi đáng ngờ hoặc bất thường, cũng như giúp quản trị viên giải quyết các vấn đề bảo mật
 - Trong **sessions audit** 2 tính năng thường được sử dụng là: **Session list** và **Commands**
 
-    Session list
-
+    Session list:
+    - Tab Sessions online: Nếu bạn có đủ quyền hạn thì bạn có thể kết thúc phiên làm việc của các user khác (Terminate), xem trực tiếp họ đang thao tác bằng cách chọn (Monitor)
+    - Tab Sessions offline: Danh sách toàn bộ các phiên đã truy cập vào hệ thống server của bạn. Bạn có thể xem và tải về
+    
     ![Session list](Picture/Session%20list.png)
 
     Commands

@@ -277,7 +277,10 @@ Ban đầu **SSL mặc định không sử dụng**. Trong bài toán này mình
     ```
     Như vậy là đã xong phần thiết lập NGINX Reverse Proxy 2 lớp cho JumpServer. Cùng mở web browser và trải nghiệm ngay thôi nào!!
 
-### 6. Bảo mật nâng cao: kết nối SSL cho container Database, Redis (đang cập nhật, theo dõi thêm tại branch v2.28.8)
+### 6. Bảo mật nâng cao: kết nối SSL cho container Database, Redis
+
+Chi tiết mình sẽ update từ trang chủ trong thời gian tới: [here](https://docs.jumpserver.org/zh/v2/install/install_security/)
+
 ### Ngoài ra còn rất nhiều các tính năng hữu ích khác, các bạn có thể tự tìm hiểu và thực hành. Chúc các bạn thành công :3
 
 ### Nếu bạn gặp lỗi không thể tự xử lý vui lòng tạo "Issues" trên github hoặc cần gấp có thể liên hệ qua Zalo mình 0326 681 592
